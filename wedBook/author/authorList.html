@@ -1,0 +1,101 @@
+<!-- // http://192.168.0.106 -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Danh sách Tác giả</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        button {
+            margin: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Danh sách Tác giả</h1>
+    <button onclick="addAuthor()">Add Author</button>
+    <table id="authorTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Tên Tác giả</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Dữ liệu sẽ được thêm vào đây -->
+        </tbody>
+    </table>
+
+    <script>
+        // Hàm để gọi API và hiển thị danh sách tác giả
+        async function fetchAuthors() {
+            
+            const response = await fetch('http://192.168.0.101:8080/api/author/list');
+            const authors = await response.json();
+
+            const tableBody = document.querySelector('#authorTable tbody');
+            tableBody.innerHTML = ''; // Xóa dữ liệu cũ nếu có
+
+            authors.forEach(author => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${author.id}</td>
+                    <td>${author.name}</td>
+                    <td>
+                        <button onclick="editAuthor(${author.id})">Edit</button>
+                        <button onclick="deleteAuthor(${author.id})">Delete</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Hàm xử lý khi bấm "Add Author"
+        function addAuthor() {
+            window.location.href = 'http://192.168.0.101/wedBook/author/addNewAuthor.html'; // Điều hướng đến trang thêm tác giả
+        }
+
+        // Hàm xử lý khi bấm "Edit"
+        function editAuthor(id) {
+            window.location.href = `edit.html?id=${id}`; // Điều hướng đến trang chỉnh sửa tác giả
+        }
+
+        // Hàm xử lý khi bấm "Delete"
+        async function deleteAuthor(id) {
+            const confirmDelete = confirm("Bạn có chắc muốn xóa tác giả này không?");
+            if (confirmDelete) {
+                // Gửi yêu cầu DELETE đến API
+                await fetch(`http://192.168.0.101:8080/api/author/delete/${id}`, {
+                    method: 'DELETE'
+                });
+                // Cập nhật lại danh sách sau khi xóa
+                fetchAuthors();
+            }
+        }
+
+        // Gọi hàm để lấy dữ liệu khi trang được tải
+        fetchAuthors();
+    </script>
+</body>
+</html>
