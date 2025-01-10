@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Author Management</title>
+</head>
+<body>
+    <h1>Author List</h1>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            $url = "http://192.168.0.104:8080/api/author/list";
+            
+            // Sử dụng cURL để lấy dữ liệu từ API
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+            $response = curl_exec($ch);
+            curl_close($ch);
+
+            // Giải mã JSON response
+            $authors = json_decode($response, true);
+
+            // Hiển thị danh sách tác giả
+            foreach ($authors as $author) {
+                echo "<tr>
+                        <td>" . $author['id'] . "</td>
+                        <td>" . $author['name'] . "</td>
+                        <td>
+                            <a href='edit.php?id=" . $author['id'] . "'>Edit</a>
+                        </td>
+                      </tr>";
+            }
+            ?>
+        </tbody>
+    </table>
+    <button onclick="window.location.href='add.php'">Add New Author</button>
+</body>
+</html>

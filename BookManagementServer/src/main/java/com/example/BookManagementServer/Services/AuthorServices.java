@@ -52,5 +52,58 @@ public class AuthorServices {
             return false; 
         }
     }
+    private boolean isAuthorLinkedWithBooks(int authorId) {
+        String sql = "SELECT COUNT(*) FROM Books WHERE AuthorID = ?";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setInt(1, authorId);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getInt(1) > 0; // Có liên kết nếu giá trị COUNT > 0
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false; // Mặc định là không có liên kết
+    }
+    public String deleteAuthor(Author author) {
+        String checkAuthorSql = "SELECT COUNT(*) FROM Authors WHERE AuthorID = ?";
+        String deleteSql = "DELETE FROM Authors WHERE AuthorID = ?";
+    
+        try {
+            int authorId = author.getId();
+    
+            // Kiểm tra sự tồn tại của Author
+            try (PreparedStatement checkStatement = connection.prepareStatement(checkAuthorSql)) {
+                checkStatement.setInt(1, authorId);
+    
+                try (ResultSet resultSet = checkStatement.executeQuery()) {
+                    if (resultSet.next() && resultSet.getInt(1) == 0) {
+                        return "AUTHOR_NOT_FOUND"; // Tác giả không tồn tại
+                    }
+                }
+            }
+    
+            // Kiểm tra xem Author có liên kết với Book không
+            if (isAuthorLinkedWithBooks(authorId)) {
+                return "BOOK_LINKED"; // Không thể xóa
+            }
+    
+            // Thực hiện xóa
+            try (PreparedStatement deleteStatement = connection.prepareStatement(deleteSql)) {
+                deleteStatement.setInt(1, authorId);
+                int rowsAffected = deleteStatement.executeUpdate();
+                return rowsAffected > 0 ? "SUCCESS" : "FAILED";
+            }
+    
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return "FAILED";
+        }
+    }
+    
+    
+     
     
 }

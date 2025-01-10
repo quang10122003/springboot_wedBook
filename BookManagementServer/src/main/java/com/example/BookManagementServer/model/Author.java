@@ -10,6 +10,9 @@ public class Author {
     public Author() {
         
     }
+    public Author(int id){
+        this.id = id;
+    }
     public Author(String authorName){
         this.authorName = authorName;
     }

@@ -5,9 +5,7 @@ import java.sql.Connection;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.ui.ModelMap;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.BookManagementServer.DatabaseConnection;
 import com.example.BookManagementServer.Services.AuthorServices;
 import com.example.BookManagementServer.model.Author;
-import com.example.BookManagementServer.queue.AuthorQueue;
+import com.example.BookManagementServer.queue.GeneralQueue;
 import com.fasterxml.jackson.databind.JsonNode;
 
 @RestController
@@ -55,12 +53,23 @@ public class AuthorController{
         String trackingId = UUID.randomUUID().toString();
 
         // Thêm yêu cầu vào hàng đợi
-        AuthorQueue.addRequest(new AuthorQueue.AuthorRequest(trackingId, "add", newAuthor));
+        GeneralQueue.addRequest(new GeneralQueue.GeneralRequest(trackingId,"AuthorService","add",newAuthor));
 
         // Trả về thông báo cho người dùng kèm tracking ID
         return "Your request has been added to the queue. Tracking ID: " + trackingId;
     }
+
+    @DeleteMapping("delete")
+    public String deleteAuthor(@RequestParam("id") String idAuthor) {
+        int id = Integer.parseInt(idAuthor);
+        Author newAuthor = new Author(id);
+        String trackingId = UUID.randomUUID().toString(); 
+        GeneralQueue.addRequest(new GeneralQueue.GeneralRequest(trackingId, "AuthorService", "delete", newAuthor));
+        return "Your request has been added to the queue. Tracking ID: " + trackingId;
+    }
 }
+
+
  
 
 // @Controller
