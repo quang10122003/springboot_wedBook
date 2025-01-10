@@ -1,0 +1,223 @@
+<!-- // http://192.168.0.106 -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Danh sách Tác giả</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.2/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table,
+        th,
+        td {
+            border: 1px solid black;
+        }
+
+        th,
+        td {
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        button {
+            margin: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="margin-bottom: 20px;">
+        <input type="text" id="searchInput" placeholder="Nhập tên tác giả để tìm" style="padding: 5px; width: 300px;" oninput="searchAuthor()" />
+    </div>
+    <h1>Danh sách Tác giả</h1>
+    <button onclick="addAuthor()">Add Author</button>
+    <table id="authorTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Tên Tác giả</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Dữ liệu sẽ được thêm vào đây -->
+        </tbody>
+    </table>
+
+    <script>
+        async function searchAuthor() {
+            const searchInput = document.getElementById('searchInput').value.trim();
+
+            // Nếu không có giá trị tìm kiếm, hiển thị tất cả tác giả
+            if (searchInput === '') {
+                fetchAuthors();
+                return;
+            }
+            try {
+                const response = await fetch(`http://localhost:8080/api/author/searchAuthor?name=${encodeURIComponent(searchInput)}`);
+
+                if (!response.ok) {
+                    console.error("Lỗi khi tìm kiếm tác giả:", response.statusText);
+                    alert("đã có lỗi sảy ra.");
+                    return;
+                }
+
+                const authors = await response.json();
+
+                const tableBody = document.querySelector('#authorTable tbody');
+                tableBody.innerHTML = ''; // Xóa dữ liệu cũ nếu có
+
+                if (authors.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="3">Không tìm thấy tác giả nào phù hợp.</td></tr>`;
+                } else {
+                    authors.forEach(author => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                    <td>${author.id}</td>
+                    <td>${author.name}</td>
+                    <td>
+                        <button onclick="deleteAuthor(${author.id})">Delete</button>
+                    </td>
+                `;
+                        tableBody.appendChild(row);
+                    });
+                }
+            } catch (error) {
+                console.error("Đã xảy ra lỗi khi tìm kiếm:", error);
+                alert("Đã xảy ra lỗi. Vui lòng thử lại sau.");
+            }
+        }
+
+        function connectWebSocket() {
+            const socket = new SockJS('http://localhost:8080/websocket');
+            stompClient = Stomp.over(socket);
+
+            stompClient.connect({}, () => {
+                console.log('WebSocket kết nối thành công');
+            }, (error) => {
+                console.error('Lỗi kết nối WebSocket:', error);
+            });
+        }
+        function subscribeToTrackingId(trackingId) {
+            console.log(`Đăng ký nhận trạng thái cho trackingId: ${trackingId}`);
+            const subscriptionId = `sub-${Math.random().toString(36).substring(2, 15)}`;
+            stompClient.subscribe(`/topic/status/${trackingId}`, (message) => {
+                console.log(`Phản hồi nhận được cho trackingId ${trackingId}: ${message.body}`);
+                switch (message.body) {
+                    case ("BOOK_LINKED"):
+                        alert("ko thể xóa tác giả do có tác giả này đang là tác giả của 1 đầu sách nào đó");
+                        break;
+                    case ("SUCCESS"):
+                        alert("xóa tác giả thành công");
+                        break;
+                    case ("FAILED"):
+                        alert("xoá tác giả thất bại");
+                        break;
+                    case ("AUTHOR_NOT_FOUND"):
+                        alert("tác giả này đã đc 1 client nào đó xóa trước bạn");
+                        break;
+                }
+            }, { id: subscriptionId });
+            fetchAuthors();
+
+        }
+
+
+
+
+        // Hàm để gọi API và hiển thị danh sách tác giả
+        async function fetchAuthors() {
+
+            const response = await fetch('http://localhost:8080/api/author/list');
+            const authors = await response.json();
+
+            const tableBody = document.querySelector('#authorTable tbody');
+            tableBody.innerHTML = ''; // Xóa dữ liệu cũ nếu có
+
+            authors.forEach(author => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${author.id}</td>
+                    <td>${author.name}</td>
+                    <td>
+                        <button onclick="editAuthor(${author.id})">Edit</button>
+                        <button onclick="deleteAuthor(${author.id})">Delete</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Hàm xử lý khi bấm "Add Author"
+        function addAuthor() {
+            window.location.href = 'http://localhost/wedBook/author/addNewAuthor.html'; // Điều hướng đến trang thêm tác giả
+        }
+
+        // Hàm xử lý khi bấm "Delete"
+        async function deleteAuthor(id) {
+            const confirmDelete = confirm("Bạn có chắc muốn xóa tác giả này không?");
+            if (!confirmDelete) return;
+            try {
+                // Gửi yêu cầu DELETE đến API
+                const response = await fetch(`http://localhost:8080/api/author/delete?id=${encodeURIComponent(id)}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                // Kiểm tra xem response có thành công không
+                if (!response.ok) {
+                    console.error("Error while deleting author:", response.statusText);
+                    alert("Xóa tác giả thất bại.");
+                    return;
+                }
+
+                // Lấy nội dung phản hồi dưới dạng text
+                const message = await response.text();
+
+
+                // Tách Tracking ID từ phản hồi
+                const trackingIdMatch = message.match(/Tracking ID: (.+)/);
+                const trackingId = trackingIdMatch ? trackingIdMatch[1] : null;
+
+
+                // Kết nối WebSocket nếu có Tracking ID
+                if (stompClient !== null) {
+                    subscribeToTrackingId(trackingId);
+                    fetchAuthors();
+                }
+
+
+            } catch (error) {
+                console.error("Error occurred while deleting author:", error);
+                alert("Đã xảy ra lỗi khi xóa tác giả. Vui lòng thử lại sau.");
+            }
+        }
+
+
+        // Gọi hàm để lấy dữ liệu khi trang được tải
+        fetchAuthors();
+        connectWebSocket();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thêm Tác giả</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.2/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body>
+    <h1>Thêm Tác giả</h1>
+    <form id="addAuthorForm">
+        <label for="authorName">Tên Tác giả:</label>
+        <input type="text" id="authorName" name="authorName" required>
+        <button type="submit">Thêm Tác giả</button>
+    </form>
+
+    <script>
+        let stompClient = null;
+
+        // Kết nối WebSocket ngay khi trang được tải
+        function connectWebSocket() {
+            const socket = new SockJS('http://localhost:8080/websocket');
+            stompClient = Stomp.over(socket);
+
+            stompClient.connect({}, () => {
+                console.log('WebSocket kết nối thành công');
+            }, (error) => {
+                console.error('Lỗi kết nối WebSocket:', error);
+            });
+        }
+
+        // Đăng ký vào topic khi có Tracking ID
+        function subscribeToTrackingId(trackingId) {
+            stompClient.subscribe(`/topic/status/${trackingId}`, (message) => {
+                console.log('Kết quả:', message.body);
+                alert(`Kết quả: ${message.body}`);
+                window.location.href = 'http://localhost/wedBook/author/authorList.html'; 
+            });
+        }
+
+        // Xử lý gửi yêu cầu thêm tác giả
+        document.getElementById('addAuthorForm').addEventListener('submit', async function (event) {
+            event.preventDefault();  // Ngăn chặn reload trang
+
+            const authorName = document.getElementById('authorName').value;
+
+            // Gửi yêu cầu đến backend
+            const response = await fetch('http://localhost:8080/api/author/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ authorName:authorName })
+            });
+
+            const message = await response.text();  // Nhận phản hồi từ backend
+            const trackingId = message.split('Tracking ID: ')[1];  // Tách Tracking ID
+            console.log(trackingId)
+            // Kết nối WebSocket nếu có Tracking ID
+            if (trackingId && stompClient !== null) {
+                subscribeToTrackingId(trackingId);
+            }
+        });
+
+        // Kết nối WebSocket khi trang được tải
+        window.addEventListener('DOMContentLoaded', (event) => {
+            connectWebSocket();
+        });
+    </script>
+</body>
+</html>

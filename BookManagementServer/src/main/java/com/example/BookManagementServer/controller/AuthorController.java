@@ -67,6 +67,11 @@ public class AuthorController{
         GeneralQueue.addRequest(new GeneralQueue.GeneralRequest(trackingId, "AuthorService", "delete", newAuthor));
         return "Your request has been added to the queue. Tracking ID: " + trackingId;
     }
+
+    @GetMapping("searchAuthor")
+    public List<Author>searchAuthor(@RequestParam("name") String searchInput){
+        return authorServices.searchAuthor(searchInput);
+    }
 }
 
 

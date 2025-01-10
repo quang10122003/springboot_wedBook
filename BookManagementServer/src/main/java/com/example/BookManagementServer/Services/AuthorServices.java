@@ -102,6 +102,40 @@ public class AuthorServices {
             return "FAILED";
         }
     }
+
+    public List<Author> searchAuthor(String searchInput) {
+        List<Author> listAuthors = new ArrayList<>();
+    
+        try {
+            // Câu truy vấn với tham số
+            String query = "SELECT * FROM Authors WHERE AuthorName COLLATE utf8mb4_unicode_ci LIKE CONCAT('%', ?, '%')";
+            
+            // Tạo PreparedStatement
+            PreparedStatement statement = connection.prepareStatement(query);
+            
+            // Gán giá trị cho tham số "?"
+            statement.setString(1, searchInput);
+    
+            // Thực hiện truy vấn
+            ResultSet resultSet = statement.executeQuery();
+    
+            // Xử lý kết quả truy vấn
+            while (resultSet.next()) {
+                int authorId = resultSet.getInt("AuthorID");
+                String authorName = resultSet.getString("AuthorName");
+    
+                // Tạo đối tượng Author và thêm vào danh sách
+                Author author = new Author(authorId, authorName);
+                listAuthors.add(author);
+            }
+            resultSet.close();
+            statement.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    
+        return listAuthors;
+    }
     
     
      
